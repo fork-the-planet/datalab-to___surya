@@ -7,6 +7,7 @@ LAYOUT_PRED_RELABEL map the VLM layout model uses, so downstream consumers (mark
 
 from __future__ import annotations
 
+import threading
 from typing import List, Optional
 
 from PIL import Image
@@ -51,19 +52,24 @@ class FastLayoutPredictor:
         )
         self.order = None
         self._order_load_attempted = False
+        self._order_load_lock = threading.Lock()
         self._disable_tqdm = settings.DISABLE_TQDM
 
     def _load_order(self):
-        if not self._order_load_attempted:
-            self._order_load_attempted = True
-            self.order = load_order_predictor(
-                device=settings.FAST_DETECTOR_DEVICE or "cpu"
-            )
-            if self.order is None:
-                logger.warning(
-                    "Reading-order model not available; falling back to raster sort "
-                    "(top-to-bottom, left-to-right) for all pages."
+        # Lock so a concurrent caller during the (slow, possibly-downloading)
+        # first load waits for the result instead of seeing a half-initialized
+        # None and silently falling back to raster order.
+        with self._order_load_lock:
+            if not self._order_load_attempted:
+                self._order_load_attempted = True
+                self.order = load_order_predictor(
+                    device=settings.FAST_DETECTOR_DEVICE or "cpu"
                 )
+                if self.order is None:
+                    logger.warning(
+                        "Reading-order model not available; falling back to raster sort "
+                        "(top-to-bottom, left-to-right) for all pages."
+                    )
         return self.order
 
     def to(
@@ -110,10 +116,11 @@ class FastLayoutPredictor:
                     image.height,
                 )
             else:
-                # Order model loaded but no feature map came back — it should have run
-                # but didn't. Surface this; the "model never loaded" case is logged once
-                # at first load.
+                # Raster sort: the normal path when order is off for this call.
                 if order is not None and feats is None and dets:
+                    # Order model loaded but no feature map came back — it
+                    # should have run but didn't. Surface this; the "model
+                    # never loaded" case is logged once at first load.
                     logger.warning(
                         "Reading-order model loaded but detector returned no feature map; "
                         "falling back to raster sort for this page."

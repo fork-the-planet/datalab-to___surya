@@ -127,11 +127,11 @@ class Settings(BaseSettings):
     OCR_ERROR_MODEL_CHECKPOINT: str = "s3://ocr_error_detection/2025_02_18"
     OCR_ERROR_BATCH_SIZE: Optional[int] = None
 
-    # ---- Fast layout / table (rf-detr, CPU) ---------------------------------
-    # Lightweight detectors. Checkpoint may be a local dir (rf-detr .pth + config.json, or an
+    # ---- Fast layout (rf-detr, CPU) ------------------------------------------
+    # Lightweight detector. Checkpoint may be a local dir (rf-detr .pth + config.json, or an
     # exported model.onnx + config.json), an hf://<repo>/<subfolder> ref, or an s3:// path.
-    # Override via FAST_LAYOUT_MODEL_CHECKPOINT / FAST_TABLE_MODEL_CHECKPOINT.
-    FAST_LAYOUT_MODEL_CHECKPOINT: str = "hf://datalab-to/surya_models/fast_layout_448"
+    # Override via FAST_LAYOUT_MODEL_CHECKPOINT.
+    FAST_LAYOUT_MODEL_CHECKPOINT: str = "hf://datalab-to/surya_layout2"
     FAST_LAYOUT_BATCH_SIZE: Optional[int] = None
     FAST_LAYOUT_CONFIDENCE_THRESHOLD: float = 0.4
     FAST_ORDER_MODEL_CHECKPOINT: str = "hf://datalab-to/surya_models/fast_order"
